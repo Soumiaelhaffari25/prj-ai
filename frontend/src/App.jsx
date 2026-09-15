@@ -2,10 +2,12 @@ import { useState } from "react";
 import { isLoggedIn, logout } from "./api";
 import Login from "./Login";
 import LeadList from "./LeadList";
+import LeadDetail from "./LeadDetail";
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
   const [selectedId, setSelectedId] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   if (!loggedIn) {
     return <Login onLogin={() => setLoggedIn(true)} />;
@@ -28,7 +30,16 @@ export default function App() {
         </button>
       </header>
 
-      <LeadList onSelect={setSelectedId} />
+      {selectedId ? (
+        <LeadDetail
+          key={selectedId}
+          leadId={selectedId}
+          onBack={() => setSelectedId(null)}
+          onUpdated={() => setRefreshKey((k) => k + 1)}
+        />
+      ) : (
+        <LeadList key={refreshKey} onSelect={setSelectedId} />
+      )}
     </div>
   );
 }
