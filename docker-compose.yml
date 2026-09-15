@@ -32,6 +32,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://lead:lead@db:5432/leaddb
       REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app 
     depends_on:
       db:
         condition: service_healthy
