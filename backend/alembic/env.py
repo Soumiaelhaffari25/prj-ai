@@ -11,6 +11,12 @@ from app.core.db import Base
 from app.models.lead import Lead  # noqa: F401
 from app.models.user import User  # noqa: F401
 
+def include_object(object, name, type_, reflected, compare_to):
+    # Ne pas gérer les tables créées par LlamaIndex (RAG)
+    if type_ == "table" and name == "data_kb_embeddings":
+        return False
+    return True
+
 load_dotenv()
 
 # this is the Alembic Config object, which provides
@@ -52,6 +58,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -74,7 +81,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

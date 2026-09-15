@@ -34,3 +34,6 @@ class Lead(Base):
     )
     assigned_to: Mapped[str | None] = mapped_column(String, nullable=True)
     action_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    review_status: Mapped[str | None] = mapped_column(String, nullable=True)   # validé / rejeté / en_attente
+    reviewed_by: Mapped[str | None] = mapped_column(String, nullable=True)      # email du commercial
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

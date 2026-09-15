@@ -19,6 +19,9 @@ from app.tasks.enrichment_task import enrich_lead_task
 from app.core.auth import get_current_user
 from app.models.user import User
 
+from datetime import datetime, timezone
+from app.schemas.lead import LeadReview 
+
 router = APIRouter(prefix="/leads", tags=["leads"])
 
 @router.post("", response_model=LeadRead, status_code=201)
@@ -102,3 +105,30 @@ def trigger_enrichment(lead_id: str, db: Session = Depends(get_db)):
     # Dépose la tâche dans la file ; ne bloque pas
     task = enrich_lead_task.delay(lead_id)
     return {"status": "enrichissement lancé", "task_id": task.id}
+
+@router.post("/{lead_id}/review", response_model=LeadRead)
+def review_lead(
+    lead_id: str,
+    payload: LeadReview,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lead = db.get(Lead, lead_id)
+    if lead is None:
+        raise HTTPException(status_code=404, detail="Lead introuvable")
+
+    if payload.action == "valider":
+        lead.review_status = "validé"
+        # si le commercial a édité le message, on garde sa version
+        if payload.edited_message is not None:
+            lead.action_message = payload.edited_message
+    elif payload.action == "rejeter":
+        lead.review_status = "rejeté"
+    else:
+        raise HTTPException(status_code=422, detail="Action invalide (valider ou rejeter)")
+
+    lead.reviewed_by = current_user.email
+    lead.reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(lead)
+    return lead

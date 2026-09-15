@@ -16,7 +16,7 @@ class LeadCreate(BaseModel):
 
 class LeadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
+   
     id: str
     full_name: str
     email: str
@@ -35,3 +35,11 @@ class LeadRead(BaseModel):
     validation_message: str | None
     assigned_to: str | None
     action_message: str | None
+    review_status: str | None
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+
+
+class LeadReview(BaseModel):
+    action: str                          # "valider" | "rejeter"
+    edited_message: str | None = None    # message édité (optionnel)
