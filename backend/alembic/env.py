@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from app.core.db import Base
 from app.models.lead import Lead  # noqa: F401
 from app.models.user import User  # noqa: F401
+from app.models.conversation import Conversation  # noqa: F401
 
 def include_object(object, name, type_, reflected, compare_to):
     # Ne pas gérer les tables créées par LlamaIndex (RAG)
