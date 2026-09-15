@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir \
     --timeout 120 --retries 5 \
     -r requirements.txt
 
+# Pré-télécharge le modèle d'embedding pendant le build (une fois pour toutes),
+# pour que le conteneur démarre instantanément sans attendre HuggingFace.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')"
+
 # Copie le code de l'application
 COPY . .
 
