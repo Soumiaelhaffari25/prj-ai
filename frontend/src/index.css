@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+:root {
+  --neo-dark: #1E3A6D;      /* bleu foncé (M, texte) */
+  --neo-dark-hover: #16294F;
+  --neo-light: #3B9FD8;     /* bleu clair (T) */
+  --neo-light-hover: #2E86BC;
+  --neo-bg: #F4F7FB;        /* fond gris-bleu très clair */
+}
+
+body {
+  background-color: var(--neo-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
