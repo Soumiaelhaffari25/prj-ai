@@ -33,7 +33,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
   const [editedMessage, setEditedMessage] = useState("");
   const [working, setWorking] = useState(false);
 
-  // Charge le lead au montage (et quand l'id change)
   useEffect(() => {
     setLoading(true);
     getLead(leadId)
@@ -45,7 +44,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
       .finally(() => setLoading(false));
   }, [leadId]);
 
-  // Lance le scoring (étape /process)
   async function handleProcess() {
     setWorking(true);
     try {
@@ -60,7 +58,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
     }
   }
 
-  // Valide ou rejette (étape /review)
   async function handleReview(action) {
     setWorking(true);
     try {
@@ -78,7 +75,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
   if (error) return <p className="p-8 text-red-600">{error}</p>;
   if (!lead) return null;
 
-  // Parse le score_details (JSON stocké en texte)
   let details = null;
   try {
     details = lead.score_details ? JSON.parse(lead.score_details) : null;
@@ -133,10 +129,19 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div><span className="text-gray-500">Email :</span> {lead.email}</div>
           <div><span className="text-gray-500">Secteur :</span> {lead.industry}</div>
-          <div><span className="text-gray-500">Taille :</span> {lead.company_size} employés</div>
-          <div><span className="text-gray-500">CA :</span> {lead.annual_revenue} DH</div>
+          <div>
+            <span className="text-gray-500">Taille :</span>{" "}
+            {lead.company_size_raw || lead.company_size || "—"} employés
+          </div>
+          <div>
+            <span className="text-gray-500">CA :</span>{" "}
+            {lead.annual_revenue
+              ? `${lead.annual_revenue.toLocaleString("fr-FR")} DH`
+              : "—"}
+          </div>
           <div className="col-span-2">
-            <span className="text-gray-500">Signaux :</span> {lead.recent_signals || "—"}
+            <span className="text-gray-500">Signaux :</span>{" "}
+            {lead.recent_signals || "—"}
           </div>
         </div>
       </div>
@@ -146,7 +151,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-bold text-gray-800 mb-4">Détail du scoring</h3>
 
-          {/* Couche BANT */}
           <div className="mb-6">
             <p className="text-sm font-semibold text-gray-700 mb-2">
               Règles BANT (déterministe) — {details.bant.score}/100
@@ -157,7 +161,6 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
             <ScoreBar label="Timing" value={details.bant.subscores.timing} />
           </div>
 
-          {/* Couche LLM */}
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-2">
               Jugement IA (Groq/Llama) — {details.llm.score}/100
@@ -185,37 +188,22 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
         </div>
       )}
 
-      {/* --- MESSAGE + VALIDATION --- */}
-      {lead.status !== "rejeté" && (
+      {/* --- MESSAGE D'APPROCHE (seulement si généré) --- */}
+      {lead.action_message && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="font-bold text-gray-800 mb-3">
-            Message d'approche
-          </h3>
-          {lead.action_message ? (
-            <>
-              <textarea
-                value={editedMessage}
-                onChange={(e) => setEditedMessage(e.target.value)}
-                rows={6}
-                className="w-full border border-gray-300 rounded p-3 text-sm mb-2"
-              />
-              {lead.review_status && (
-                <p className="text-sm text-gray-500 mb-3">
-                  Validation : <span className="font-medium">{lead.review_status}</span>
-                  {lead.reviewed_by && ` par ${lead.reviewed_by}`}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-gray-500">
-              Aucun message généré. Lance le traitement pour en produire un.
-            </p>
-          )}
+          <h3 className="font-bold text-gray-800 mb-3">Message d'approche</h3>
+          <textarea
+            value={editedMessage}
+            onChange={(e) => setEditedMessage(e.target.value)}
+            rows={6}
+            className="w-full border border-gray-300 rounded p-3 text-sm mb-2"
+          />
         </div>
       )}
 
-      {/* --- ACTIONS --- */}
-      <div className="flex gap-3">
+      {/* --- ACTIONS (human-in-the-loop sur TOUS les leads) --- */}
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Scorer si pas encore fait */}
         {lead.score === null && (
           <button
             onClick={handleProcess}
@@ -225,25 +213,44 @@ export default function LeadDetail({ leadId, onBack, onUpdated }) {
             {working ? "Traitement..." : "Lancer le scoring"}
           </button>
         )}
-        {lead.status !== "rejeté" && lead.action_message && (
+
+        {/* Validation humaine : disponible sur tous les leads scorés */}
+        {lead.score !== null && (
           <>
             <button
               onClick={() => handleReview("valider")}
               disabled={working}
               className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
             >
-              Valider
+              {lead.status === "rejeté"
+                ? "Rattraper ce lead"
+                : "Valider la proposition"}
             </button>
             <button
               onClick={() => handleReview("rejeter")}
               disabled={working}
               className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
             >
-              Rejeter
+              {lead.status === "rejeté"
+                ? "Confirmer le rejet"
+                : "Rejeter la proposition"}
             </button>
           </>
         )}
       </div>
+
+      {/* Rappel décision IA vs décision humaine */}
+      {lead.score !== null && (
+        <p className="mt-3 text-xs text-gray-500">
+          Décision de l'IA : <span className="font-medium">{lead.status}</span>
+          {lead.review_status && (
+            <>
+              {" · "}Votre décision :{" "}
+              <span className="font-medium">{lead.review_status}</span>
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

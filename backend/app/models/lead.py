@@ -19,6 +19,7 @@ class Lead(Base):
     job_title: Mapped[str | None] = mapped_column(String, nullable=True)
     industry: Mapped[str | None] = mapped_column(String, nullable=True)
     company_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    company_size_raw: Mapped[str | None] = mapped_column(String, nullable=True)
     annual_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
     recent_signals: Mapped[str | None] = mapped_column(String, nullable=True)
     score: Mapped[int | None] = mapped_column(Integer, nullable=True)

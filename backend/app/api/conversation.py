@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.conversation import Conversation
 from app.models.lead import Lead
-from app.services.conversation_agent import converse, REQUIRED_FIELDS
+from app.services.conversation_agent import converse, ESSENTIAL_FIELDS
 from app.services.normalization import normalize_lead_data, validate_lead_email
 from app.graph.pipeline import pipeline
 
@@ -87,12 +87,36 @@ async def send_message(payload: MessageIn, db: Session = Depends(get_db)):
     conv.messages = json.dumps(history, ensure_ascii=False)
     conv.collected_data = json.dumps(collected, ensure_ascii=False)
 
+    # Garde-fou : on ne conclut que si TOUS les champs obligatoires sont présents
+    has_all_essentials = all(
+        collected.get(f) for f in ESSENTIAL_FIELDS
+    )
+
     lead_created = None
-    # Si la conversation est complète, on crée et on score le lead
-    if result.get("conversation_complete") and conv.status == "en_cours":
+    if (
+        result.get("conversation_complete")
+        and has_all_essentials
+        and conv.status == "en_cours"
+    ):
         lead_created = _create_and_score_lead(db, collected)
         conv.status = "terminée"
         conv.lead_id = lead_created
+    elif result.get("conversation_complete") and not has_all_essentials:
+        # Le LLM veut conclure mais il manque des obligatoires : on force une relance
+        missing = [f for f in ESSENTIAL_FIELDS if not collected.get(f)]
+        labels = {
+            "full_name": "votre nom", "email": "votre email",
+            "company": "le nom de votre entreprise", "job_title": "votre poste",
+        }
+        manquants = ", ".join(labels.get(m, m) for m in missing)
+        result["message"] = (
+            f"Avant de transmettre votre demande, il me manque encore : "
+            f"{manquants}. Pourriez-vous me les préciser ?"
+        )
+        result["conversation_complete"] = False
+        # on remplace le dernier message de l'agent par cette relance
+        history[-1] = {"role": "assistant", "content": result["message"]}
+        conv.messages = json.dumps(history, ensure_ascii=False)
 
     db.commit()
 
@@ -120,7 +144,8 @@ def _create_and_score_lead(db: Session, collected: dict) -> str | None:
         "email": email,
         "company": collected.get("company"),
         "industry": collected.get("industry"),
-        "company_size": _to_int(collected.get("company_size")),      # ← converti
+        "company_size": _to_int(collected.get("company_size")),  # ← converti
+        "company_size_raw": collected.get("company_size_raw"),
         "annual_revenue": _to_float(collected.get("annual_revenue")), # ← converti
         "job_title": collected.get("job_title"),
         "recent_signals": collected.get("recent_signals"),

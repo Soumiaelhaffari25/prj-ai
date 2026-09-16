@@ -26,6 +26,7 @@ class LeadRead(BaseModel):
     job_title: str | None
     industry: str | None
     company_size: int | None
+    company_size_raw: str | None
     annual_revenue: float | None
     recent_signals: str | None
     score: int | None

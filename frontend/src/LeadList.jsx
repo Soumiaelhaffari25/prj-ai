@@ -37,7 +37,6 @@ export default function LeadList({ onSelect }) {
       }
     };
 
-    // Ferme la connexion proprement quand le composant disparaît
     return () => ws.close();
   }, []);
 
@@ -58,6 +57,7 @@ export default function LeadList({ onSelect }) {
               <th className="px-4 py-3">Secteur</th>
               <th className="px-4 py-3">Score</th>
               <th className="px-4 py-3">Décision</th>
+              <th className="px-4 py-3">Validation</th>
             </tr>
           </thead>
           <tbody>
@@ -81,6 +81,21 @@ export default function LeadList({ onSelect }) {
                   >
                     {lead.status}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  {lead.review_status ? (
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        lead.review_status === "validé"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {lead.review_status === "validé" ? "✓ validé" : "✗ rejeté"}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 text-xs">en attente</span>
+                  )}
                 </td>
               </tr>
             ))}
