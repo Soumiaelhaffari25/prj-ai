@@ -1,7 +1,7 @@
 // Toutes les communications avec le backend NeoMorIT passent par ici.
 const API_URL = "http://localhost:8000";
 
-// Récupère le token stocké en mémoire (dans le navigateur)
+// Récupère le token stocké dans le navigateur
 function getToken() {
   return localStorage.getItem("token");
 }
@@ -20,7 +20,7 @@ export async function login(email, password) {
   });
   if (!res.ok) throw new Error("Email ou mot de passe incorrect");
   const data = await res.json();
-  localStorage.setItem("token", data.access_token); // on stocke le token
+  localStorage.setItem("token", data.access_token);
   return data;
 }
 
@@ -57,10 +57,27 @@ export async function reviewLead(id, action, editedMessage = null) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`, // on envoie le token
+      Authorization: `Bearer ${getToken()}`,
     },
     body: JSON.stringify({ action, edited_message: editedMessage }),
   });
   if (!res.ok) throw new Error("Erreur lors de la validation");
+  return res.json();
+}
+
+// --- Chatbot (public, pas de token) ---
+export async function startChat() {
+  const res = await fetch(`${API_URL}/chat/start`, { method: "POST" });
+  if (!res.ok) throw new Error("Impossible de démarrer la conversation");
+  return res.json();
+}
+
+export async function sendChatMessage(conversationId, message) {
+  const res = await fetch(`${API_URL}/chat/message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ conversation_id: conversationId, message }),
+  });
+  if (!res.ok) throw new Error("Erreur lors de l'envoi du message");
   return res.json();
 }

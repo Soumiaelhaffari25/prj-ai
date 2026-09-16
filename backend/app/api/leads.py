@@ -22,6 +22,9 @@ from app.models.user import User
 from datetime import datetime, timezone
 from app.schemas.lead import LeadReview 
 
+from fastapi import WebSocket, WebSocketDisconnect
+from app.core.ws_manager import manager
+
 router = APIRouter(prefix="/leads", tags=["leads"])
 
 @router.post("", response_model=LeadRead, status_code=201)
@@ -132,3 +135,14 @@ def review_lead(
     db.commit()
     db.refresh(lead)
     return lead
+
+@router.websocket("/ws")
+async def leads_websocket(websocket: WebSocket):
+    """Le dashboard se connecte ici pour recevoir les mises à jour en temps réel."""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # On garde la connexion ouverte (on attend, sans rien faire de spécial)
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

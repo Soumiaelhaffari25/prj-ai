@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getLeads } from "./api";
 
-// Couleur du badge selon la décision
 function statusColor(status) {
   if (status === "qualifié") return "bg-green-100 text-green-800";
   if (status === "à nurturer") return "bg-yellow-100 text-yellow-800";
@@ -14,11 +13,32 @@ export default function LeadList({ onSelect }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  // Fonction de chargement, réutilisable
+  function loadLeads() {
     getLeads()
       .then(setLeads)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  }
+
+  // Chargement initial
+  useEffect(() => {
+    loadLeads();
+  }, []);
+
+  // Connexion WebSocket pour le temps réel
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/leads/ws");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.event === "new_lead") {
+        loadLeads(); // un nouveau lead est arrivé → on recharge
+      }
+    };
+
+    // Ferme la connexion proprement quand le composant disparaît
+    return () => ws.close();
   }, []);
 
   if (loading) return <p className="p-8 text-gray-500">Chargement...</p>;

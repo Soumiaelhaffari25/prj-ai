@@ -11,7 +11,32 @@ from app.services.conversation_agent import converse, REQUIRED_FIELDS
 from app.services.normalization import normalize_lead_data, validate_lead_email
 from app.graph.pipeline import pipeline
 
+from app.core.ws_manager import manager
+
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+import re
+
+def _to_int(value):
+    """Convertit une valeur extraite en entier, ou None si impossible.
+    Gère les cas comme '100 à 150' (prend le premier nombre), '120 employés', etc."""
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    # Cherche le premier nombre dans le texte
+    match = re.search(r"\d+", str(value).replace(" ", ""))
+    return int(match.group()) if match else None
+
+
+def _to_float(value):
+    """Convertit en float, ou None si impossible."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    match = re.search(r"\d+", str(value).replace(" ", ""))
+    return float(match.group()) if match else None
 
 
 class MessageIn(BaseModel):
@@ -38,7 +63,7 @@ def start_conversation(db: Session = Depends(get_db)):
 
 
 @router.post("/message")
-def send_message(payload: MessageIn, db: Session = Depends(get_db)):
+async def send_message(payload: MessageIn, db: Session = Depends(get_db)):
     """Envoie un message du prospect et renvoie la réponse de l'agent."""
     conv = db.get(Conversation, payload.conversation_id)
     if conv is None:
@@ -70,14 +95,18 @@ def send_message(payload: MessageIn, db: Session = Depends(get_db)):
         conv.lead_id = lead_created
 
     db.commit()
+
+    # Si un lead vient d'être créé, on prévient les dashboards en temps réel
+    if lead_created:
+        await manager.broadcast({"event": "new_lead", "lead_id": lead_created})
+
     return {
         "conversation_id": conv.id,
         "message": result["message"],
         "complete": result.get("conversation_complete", False),
         "lead_id": lead_created,
     }
-
-
+    
 def _create_and_score_lead(db: Session, collected: dict) -> str | None:
     """Crée le lead à partir des infos collectées, puis le score (pipeline)."""
     # Validation minimale : il faut au moins un email valide
@@ -91,7 +120,8 @@ def _create_and_score_lead(db: Session, collected: dict) -> str | None:
         "email": email,
         "company": collected.get("company"),
         "industry": collected.get("industry"),
-        "company_size": collected.get("company_size"),
+        "company_size": _to_int(collected.get("company_size")),      # ← converti
+        "annual_revenue": _to_float(collected.get("annual_revenue")), # ← converti
         "job_title": collected.get("job_title"),
         "recent_signals": collected.get("recent_signals"),
         "source": "chatbot",
