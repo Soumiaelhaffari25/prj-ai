@@ -2,6 +2,7 @@
 from groq import Groq
 
 from app.core.config import settings
+from langfuse import observe
 
 client = Groq(api_key=settings.groq_api_key)
 
@@ -17,7 +18,7 @@ Règles :
 - Termine par une proposition d'échange (appel/rendez-vous).
 - Réponds UNIQUEMENT avec le texte du message, sans objet ni signature."""
 
-
+@observe(name="generation-message")
 def generate_message(lead, rag_context: str | None = None) -> dict:
     """Génère un message d'approche personnalisé pour un lead qualifié."""
     context = f"""Prospect :

@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     # Authentification JWT
     jwt_secret_key: str = "change-me-in-production-with-a-long-random-string"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 60.
+    # Langfuse (observabilité) — optionnel
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
 
 
 settings = Settings()

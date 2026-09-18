@@ -3,6 +3,7 @@ import json
 from groq import Groq
 
 from app.core.config import settings
+from langfuse import observe
 
 client = Groq(api_key=settings.groq_api_key)
 
@@ -61,7 +62,7 @@ Tu réponds TOUJOURS avec un objet JSON valide de la forme :
   "conversation_complete": <true si tu as l'essentiel, false sinon>
 }"""
 
-
+@observe(name="conversation-agent")
 def converse(history: list, collected: dict) -> dict:
     """Un tour de conversation : historique + infos déjà collectées →
     réponse de l'agent, infos extraites, et si la conversation est complète."""

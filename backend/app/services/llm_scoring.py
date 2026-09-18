@@ -2,6 +2,7 @@
 import json
 from groq import Groq
 from app.core.config import settings
+from langfuse import observe
 
 client = Groq(api_key=settings.groq_api_key)
 
@@ -18,7 +19,7 @@ Tu réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme
   "risk_flags": ["<éventuels signaux négatifs>"]
 }"""
 
-
+@observe(name="scoring-llm")
 def score_with_llm(lead, rag_context: str | None = None) -> dict:
     """Évaluation qualitative structurée du lead, éclairée par le contexte RAG."""
     context_block = ""
@@ -64,3 +65,4 @@ def score_with_llm(lead, rag_context: str | None = None) -> dict:
             "risk_flags": ["llm_error"],
             "error": True,
         }
+        
